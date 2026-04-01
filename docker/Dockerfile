@@ -21,6 +21,14 @@ FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS builder
 
 ARG GOLANG_VERSION=1.24.13
 
+# 사내 프록시 및 SSL 인증서 설정
+ENV http_proxy=http://12.26.204.100:8080
+ENV https_proxy=http://12.26.204.100:8080
+COPY samsungsemi-prx.crt /usr/local/share/ca-certificates/samsungsemi-prx.crt
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /go/src/github.com/NVIDIA/dcgm-exporter
 
 # Install build dependencies with cache
@@ -116,6 +124,12 @@ ARG VERSION
 ARG DCGM_VERSION
 ARG TARGETARCH
 
+# 사내 프록시 및 SSL 인증서 설정
+ENV http_proxy=http://12.26.204.100:8080
+ENV https_proxy=http://12.26.204.100:8080
+COPY samsungsemi-prx.crt /usr/local/share/ca-certificates/samsungsemi-prx.crt
+RUN update-ca-certificates
+
 LABEL io.k8s.display-name="NVIDIA DCGM Exporter"
 LABEL name="NVIDIA DCGM Exporter"
 LABEL vendor="NVIDIA"
@@ -197,6 +211,12 @@ FROM --platform=$TARGETARCH nvcr.io/nvidia/cuda:13.1.1-base-ubi9 AS runtime-ubi
 ARG VERSION
 ARG DCGM_VERSION
 
+# 사내 프록시 및 SSL 인증서 설정
+ENV http_proxy=http://12.26.204.100:8080
+ENV https_proxy=http://12.26.204.100:8080
+COPY samsungsemi-prx.crt /etc/pki/ca-trust/source/anchors/samsungsemi-prx.crt
+RUN update-ca-trust
+
 LABEL io.k8s.display-name="NVIDIA DCGM Exporter"
 LABEL name="NVIDIA DCGM Exporter"
 LABEL vendor="NVIDIA"
@@ -274,6 +294,12 @@ ENTRYPOINT ["/usr/local/dcgm/dcgm-exporter-entrypoint.sh"]
 FROM --platform=$TARGETARCH nvcr.io/nvidia/cuda:13.1.1-base-ubuntu22.04 AS runtime-distroless-helper
 
 ARG TARGETARCH
+
+# 사내 프록시 및 SSL 인증서 설정
+ENV http_proxy=http://12.26.204.100:8080
+ENV https_proxy=http://12.26.204.100:8080
+COPY samsungsemi-prx.crt /usr/local/share/ca-certificates/samsungsemi-prx.crt
+RUN update-ca-certificates
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -qq update && apt-get upgrade -y --no-install-recommends && \

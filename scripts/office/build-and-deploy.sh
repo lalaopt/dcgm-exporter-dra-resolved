@@ -32,9 +32,14 @@ build_image() {
     echo "=== 이미지 빌드 시작: ${FULL_IMAGE} ==="
     cd "${PROJECT_ROOT}"
 
+    # samsungsemi-prx.crt 존재 확인
+    if [ ! -f "samsungsemi-prx.crt" ]; then
+        echo "ERROR: samsungsemi-prx.crt 파일이 프로젝트 루트에 없습니다."
+        echo "  cp /usr/local/share/ca-certificates/samsungsemi-prx.crt ."
+        exit 1
+    fi
+
     docker build \
-        --build-arg http_proxy="${PROXY}" \
-        --build-arg https_proxy="${PROXY}" \
         --build-arg GOLANG_VERSION=1.24.13 \
         --build-arg DCGM_VERSION=4.5.2 \
         --build-arg VERSION=4.8.1 \
