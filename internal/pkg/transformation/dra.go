@@ -22,7 +22,7 @@ import (
 	"log/slog"
 	"time"
 
-	resourcev1beta1 "k8s.io/api/resource/v1beta1"
+	resourcev1beta2 "k8s.io/api/resource/v1beta2"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -40,7 +40,7 @@ func NewDRAResourceSliceManager() (*DRAResourceSliceManager, error) {
 	}
 
 	factory := informers.NewSharedInformerFactory(client, informerResyncPeriod)
-	informer := factory.Resource().V1beta1().ResourceSlices().Informer()
+	informer := factory.Resource().V1beta2().ResourceSlices().Informer()
 
 	m := &DRAResourceSliceManager{
 		factory:      factory,
@@ -51,7 +51,7 @@ func NewDRAResourceSliceManager() (*DRAResourceSliceManager, error) {
 
 	_, err = informer.AddEventHandler(&cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
-			s := obj.(*resourcev1beta1.ResourceSlice)
+			s := obj.(*resourcev1beta2.ResourceSlice)
 			return s.Spec.Driver == DRAGPUDriverName
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
@@ -110,7 +110,7 @@ func (m *DRAResourceSliceManager) GetDeviceInfo(pool, device string) (string, *D
 	return "", nil
 }
 
-func getAttrString(attrs map[resourcev1beta1.QualifiedName]resourcev1beta1.DeviceAttribute, key resourcev1beta1.QualifiedName) string {
+func getAttrString(attrs map[resourcev1beta2.QualifiedName]resourcev1beta2.DeviceAttribute, key resourcev1beta2.QualifiedName) string {
 	if attr, ok := attrs[key]; ok && attr.StringValue != nil {
 		return *attr.StringValue
 	}
@@ -118,18 +118,18 @@ func getAttrString(attrs map[resourcev1beta1.QualifiedName]resourcev1beta1.Devic
 }
 
 func (m *DRAResourceSliceManager) onAddOrUpdate(obj interface{}) {
-	slice := obj.(*resourcev1beta1.ResourceSlice)
+	slice := obj.(*resourcev1beta2.ResourceSlice)
 	pool := slice.Spec.Pool.Name
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for _, dev := range slice.Spec.Devices {
-		if dev.Basic == nil || dev.Basic.Attributes == nil {
+		if dev.Attributes == nil {
 			continue
 		}
 		key := pool + "/" + dev.Name
-		attr := dev.Basic.Attributes
+		attr := dev.Attributes
 
 		deviceType := getAttrString(attr, "type")
 		switch deviceType {
@@ -163,7 +163,7 @@ func (m *DRAResourceSliceManager) onAddOrUpdate(obj interface{}) {
 }
 
 func (m *DRAResourceSliceManager) onDelete(obj interface{}) {
-	slice := obj.(*resourcev1beta1.ResourceSlice)
+	slice := obj.(*resourcev1beta2.ResourceSlice)
 	pool := slice.Spec.Pool.Name
 
 	m.mu.Lock()
